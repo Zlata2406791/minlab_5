@@ -1,0 +1,67 @@
+import numpy as np
+from sklearn.datasets import make_blobs, make_moons, make_circles
+import matplotlib.pyplot as plt
+
+def generate_noisy_circles():
+    return make_circles(n_samples=300, factor=0.5, noise=0.05)
+
+def generate_noisy_moons():
+    return make_moons(n_samples=300, noise=0.05)
+
+def generate_blobs_with_variance():
+    return make_blobs(n_samples=300, cluster_std=[1.0, 2.5, 0.5], random_state=170)
+
+def generate_anisotropic():
+    X, y = make_blobs(n_samples=300, random_state=170)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X = np.dot(X, transformation)
+    return X, y
+
+def generate_uniform():
+    return np.random.rand(300, 2), None
+
+def generate_structured_blobs():
+    X, y = make_blobs(n_samples=300, random_state=170)
+    X_filtered = np.vstack((X[y == 0][:30], X[y == 1][:100], X[y == 2][:10]))
+    y_filtered = np.concatenate((np.zeros(30), np.ones(100), np.ones(10)*2))
+    return X_filtered, y_filtered
+
+from sklearn.cluster import AffinityPropagation, SpectralClustering, AgglomerativeClustering
+
+def affinity_propagation_clustering(X):
+    af = AffinityPropagation(damping=0.75).fit(X)
+    return af.labels_
+
+def spectral_clustering(X):
+    sc = SpectralClustering(n_clusters=3, affinity='nearest_neighbors').fit(X)
+    return sc.labels_
+
+def ward_clustering(X):
+    ward = AgglomerativeClustering(n_clusters=3, linkage='ward').fit(X)
+    return ward.labels_
+
+def plot_clusters(X, y, algorithm_name, dataset_name):
+    plt.scatter(X[:, 0], X[:, 1], c=y, cmap='viridis', s=10)
+    plt.title(f"{algorithm_name} on {dataset_name}")
+    plt.show()
+
+datasets = {
+    "Noisy Circles": generate_noisy_circles(),
+    "Noisy Moons": generate_noisy_moons(),
+    "Blobs with Variance": generate_blobs_with_variance(),
+    "Anisotropic": generate_anisotropic(),
+    "Uniform": generate_uniform(),
+    "Structured Blobs": generate_structured_blobs()
+}
+
+algorithms = {
+    "Affinity Propagation": affinity_propagation_clustering,
+    "Spectral Clustering": spectral_clustering,
+    "Ward": ward_clustering
+}
+
+for dataset_name, (X, y_true) in datasets.items():
+    for algo_name, algo_func in algorithms.items():
+        y_pred = algo_func(X)
+        plot_clusters(X, y_pred, algo_name, dataset_name)
+        
