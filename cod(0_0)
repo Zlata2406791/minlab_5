@@ -1,0 +1,92 @@
+import numpy as np
+from sklearn.datasets import make_blobs, make_moons, make_circles
+import matplotlib.pyplot as plt
+from sklearn.cluster import AffinityPropagation, SpectralClustering, AgglomerativeClustering
+
+# Функции генерации данных
+def generate_noisy_circles():
+    return make_circles(n_samples=300, factor=0.5, noise=0.05, random_state=42)
+
+def generate_noisy_moons():
+    return make_moons(n_samples=300, noise=0.05, random_state=42)
+
+def generate_blobs_with_variance():
+    return make_blobs(n_samples=300, cluster_std=[1.0, 2.5, 0.5], random_state=170)
+
+def generate_anisotropic():
+    X, y = make_blobs(n_samples=300, random_state=170)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X = np.dot(X, transformation)
+    return X, y
+
+def generate_uniform():
+    return np.random.rand(300, 2), None
+
+def generate_structured_blobs():
+    X, y = make_blobs(n_samples=300, random_state=170)
+    X_filtered = np.vstack((X[y == 0][:30], X[y == 1][:100], X[y == 2][:10]))
+    y_filtered = np.concatenate((np.zeros(30), np.ones(100), np.ones(10)*2))
+    return X_filtered, y_filtered
+
+# Функции кластеризации
+def affinity_propagation_clustering(X):
+    af = AffinityPropagation(damping=0.75, random_state=42).fit(X)
+    return af.labels_
+
+def spectral_clustering(X):
+    sc = SpectralClustering(n_clusters=3, affinity='nearest_neighbors', 
+                          random_state=42).fit(X)
+    return sc.labels_
+
+def ward_clustering(X):
+    ward = AgglomerativeClustering(n_clusters=3, linkage='ward').fit(X)
+    return ward.labels_
+
+# Создаем матрицу графиков
+datasets = {
+    "Noisy Circles": generate_noisy_circles(),
+    "Noisy Moons": generate_noisy_moons(),
+    "Blobs with Variance": generate_blobs_with_variance(),
+    "Anisotropic": generate_anisotropic(),
+    "Uniform": generate_uniform(),
+    "Structured Blobs": generate_structured_blobs()
+}
+
+algorithms = {
+    "Affinity Propagation": affinity_propagation_clustering,
+    "Spectral Clustering": spectral_clustering,
+    "Ward": ward_clustering
+}
+
+# Создаем фигуру с субплoтами
+plt.figure(figsize=(18, 24))
+plt.subplots_adjust(hspace=0.4, wspace=0.2)
+
+# Заполняем матрицу графиков
+for i, (dataset_name, (X, y_true)) in enumerate(datasets.items()):
+    for j, (algo_name, algo_func) in enumerate(algorithms.items()):
+        plt.subplot(6, 3, i*3 + j + 1)
+        
+        try:
+            y_pred = algo_func(X)
+            plt.scatter(X[:, 0], X[:, 1], c=y_pred, cmap='viridis', s=10)
+            
+            # Добавляем оценку silhouette (если больше одного кластера)
+            from sklearn.metrics import silhouette_score
+            if len(np.unique(y_pred)) > 1:
+                score = silhouette_score(X, y_pred)
+                plt.text(0.05, 0.95, f"Score: {score:.2f}", 
+                        transform=plt.gca().transAxes,
+                        bbox=dict(facecolor='white', alpha=0.7))
+            
+        except Exception as e:
+            plt.text(0.3, 0.5, f"Error: {str(e)}", 
+                   transform=plt.gca().transAxes)
+        
+        if j == 0:
+            plt.ylabel(dataset_name, rotation=0, ha='right', va='center')
+        if i == 0:
+            plt.title(algo_name)
+
+plt.suptitle("Сравнение алгоритмов кластеризации на разных датасетах", y=1.02, fontsize=14)
+plt.show()
